@@ -23,7 +23,7 @@ steps:
   - --entry-point=tesla_location_services
   - --source=gcp/src
   - --trigger-http
-  - --runtime=python39
+  - --runtime=python310
   - --memory=256
   - --min-instances=1
   - --max-instances=2
