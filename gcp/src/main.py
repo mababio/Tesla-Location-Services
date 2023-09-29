@@ -76,7 +76,7 @@ def tesla_location_services(request):
         case 'get_location':
             return get_location()
         case 'get_proximity':
-            if request.get_json['lat'] and request.get_json()['lon']:
+            if request.get_json()['lat'] and request.get_json()['lon']:
                 return get_proximity(request.get_json['lat'], request.get_json['lon'])
             else:
                 return get_proximity()
