@@ -21,7 +21,7 @@ steps:
   - --region=us-east4
   - --service-account=tesla-sc-get-location@tesla-automation-397321.iam.gserviceaccount.com
   - --entry-point=tesla_location_services
-  - --source=src
+  - --source=gcp/src
   - --trigger-http
   - --runtime=python39
   - --memory=256
