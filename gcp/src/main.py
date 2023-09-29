@@ -43,6 +43,7 @@ def get_proximity(lat=None, lon=None):
         lat = latlon['lat']
         lon = latlon['lon']
 
+
     radius = 6371
     d_lat = math.radians(lat - settings['production']['LAT_HOME'])
     d_lon = math.radians(lon - settings['production']['LON_HOME'])
