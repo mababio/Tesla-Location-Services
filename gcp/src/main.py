@@ -23,8 +23,8 @@ def get_location():
             return []
         else:
             drive_state = tesla_data['response'][wanted_key]
-            lat = str(drive_state['latitude'])
-            lon = str(drive_state['longitude'])
+            lat = float(drive_state['latitude'])
+            lon = float(drive_state['longitude'])
             return {'lat': lat, 'lon': lon, 'speed': drive_state['speed']}
 
 
