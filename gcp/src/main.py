@@ -63,13 +63,13 @@ def get_proximity(lat=None, lon=None):
         else:
             data['is_on_arcuri'] = False
 
-        json_data = json.dumps(data)
-        return json_data
+        return data
     else:
         data['is_close'] = False
         data['is_on_arcuri'] = False
-        json_data = json.dumps(data)
-        return json_data
+        return data
+        # json_data = json.dumps(data)
+        # return json_data
 
 
 def tesla_location_services(request):
