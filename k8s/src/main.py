@@ -42,7 +42,7 @@ def get_location():
     with teslapy.Tesla(TESLA_USERNAME) as tesla:
         wanted_key = 'drive_state'
         vehicles = tesla.vehicle_list()
-        timeout = 7
+        timeout = 10
         try:
             vehicles[0].sync_wake_up(timeout)
             tesla_data = vehicles[0].api('VEHICLE_DATA')
