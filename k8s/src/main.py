@@ -1,9 +1,10 @@
 import math
-import googlemaps
 import teslapy
 from flask import Flask, request
 import os
 import notification
+import requests
+import json
 
 # TODO: Convert to Fast API
 
@@ -21,6 +22,12 @@ HOME_RADIUS = float(os.environ.get("HOME_RADIUS"))
 TESLA_USERNAME = os.environ.get("TESLA_USERNAME")
 HOME_STREET = os.environ.get("HOME_STREET")
 GMAPS_KEY = os.environ.get("GMAPS_KEY")
+GEOAPIFY_KEY = os.environ.get("GEOAPIFY_KEY")
+GEOAPIFY_URL = os.environ.get("GEOAPIFY_URL")
+
+
+# b2136c9bc7694fff850ae21b0eaab53d
+# https://api.geoapify.com/v1/geocode/reverse
 
 
 @app.route('/')
@@ -94,13 +101,25 @@ def get_proximity():
         # return json_data
 
 
-def is_on_home_street(lat, lon):
-    gmaps = googlemaps.Client(key=GMAPS_KEY)
-    reverse_geocode_result = gmaps.reverse_geocode((lat, lon))
-    for i in reverse_geocode_result:
-        if HOME_STREET in i['address_components'][0]['long_name']:
-            return True
-    return False
+@app.route('/is_home_street', methods=['GET'])
+def is_on_home_street():
+    try:
+        car_gps = get_location()
+    except Exception as e:
+        notification.send_push_notification('Issue getting Car location')
+        raise Exception
+
+    if not isinstance(car_gps, dict) or 'lat' not in car_gps or 'lon' not in car_gps:
+        notification.send_push_notification("Expected location data not actual data")
+        raise Exception
+    else:
+        try:
+            gps_only = dict(list(car_gps.items())[:2])
+            street = requests.get(f'{GEOAPIFY_URL}?apiKey={GEOAPIFY_KEY}', params=gps_only).json()['features'][0]['properties']['street']
+            return json.dumps(True) if street == HOME_STREET else json.dumps(False)
+        except KeyError as e:
+            notification.send_push_notification(f"Issue with API: {e}")
+            raise KeyError(f"Error with Geccoding API: {e}")
 
 
 if __name__ == "__main__":
