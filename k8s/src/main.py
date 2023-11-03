@@ -21,7 +21,6 @@ LON_HOME = float(os.environ.get("LON_HOME"))
 HOME_RADIUS = float(os.environ.get("HOME_RADIUS"))
 TESLA_USERNAME = os.environ.get("TESLA_USERNAME")
 HOME_STREET = os.environ.get("HOME_STREET")
-GMAPS_KEY = os.environ.get("GMAPS_KEY")
 GEOAPIFY_KEY = os.environ.get("GEOAPIFY_KEY")
 GEOAPIFY_URL = os.environ.get("GEOAPIFY_URL")
 
