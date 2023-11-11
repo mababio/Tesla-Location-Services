@@ -37,4 +37,4 @@ ENV PORT 8080
 #################### For folks who are not creating kubernetes secrets ####################
 ####### Application specfic varaibles ##########
 
-CMD echo $CACHE_TESLA_JSON > cache.json; . $APP_HOME/bin/activate && exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
+CMD echo $CACHE_TESLA_JSON > cache.json; . $APP_HOME/bin/activate && exec python -m uvicorn --host 0.0.0.0 --port $PORT main:app --reload

@@ -5,6 +5,8 @@ import os
 import notification
 import requests
 import json
+from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 # TODO: Convert to Fast API
 
@@ -14,7 +16,7 @@ import json
    :return: location if available
 """
 
-app = Flask(__name__)
+app = FastAPI()
 
 LAT_HOME = float(os.environ.get("LAT_HOME"))
 LON_HOME = float(os.environ.get("LON_HOME"))
@@ -24,12 +26,16 @@ HOME_STREET = os.environ.get("HOME_STREET")
 GEOAPIFY_KEY = os.environ.get("GEOAPIFY_KEY")
 GEOAPIFY_URL = os.environ.get("GEOAPIFY_URL")
 
+app.add_middleware(
+    CORSMiddleware,
+    # allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# b2136c9bc7694fff850ae21b0eaab53d
-# https://api.geoapify.com/v1/geocode/reverse
 
-
-@app.route('/')
+@app.get('/')
 def default():
     if 'method' in request.get_json():
         match request.get_json()['method']:
@@ -43,7 +49,7 @@ def default():
 
 # TODO: In the event that person has multiple cars, we can add param to select Car. It can be on vin, display name.
 
-@app.route('/get_location', methods=['GET'])
+@app.get('/get_location')
 def get_location():
     with teslapy.Tesla(TESLA_USERNAME) as tesla:
         wanted_key = 'drive_state'
@@ -57,21 +63,31 @@ def get_location():
             raise teslapy.VehicleError
 
         if type(tesla_data) is not teslapy.JsonDict or wanted_key not in tesla_data['response']:
-            return []
+            return None
         else:
             drive_state = tesla_data['response'][wanted_key]
-            lat = float(drive_state['latitude'])
-            lon = float(drive_state['longitude'])
-            return {'lat': lat, 'lon': lon, 'speed': drive_state['speed']}
+            return {'lat': drive_state['latitude'], 'lon': drive_state['longitude'], 'speed': drive_state['speed']}
 
 
-@app.route('/get_proximity', methods=['GET'])
+@app.get('/get_proximity')
 def get_proximity():
-    if 'lat' not in request.get_json() or 'lon' not in request.get_json():
-        latlon = get_location()
-        lat = latlon['lat']
-        lon = latlon['lon']
 
+    #TODO: Not sure if someother resouce depends on providing gps so come back and fix this
+
+    # if 'lat' not in request.get_json() or 'lon' not in request.get_json():
+    #     latlon = get_location()
+    #     lat = float(latlon['lat'])
+    #     lon = float(latlon['lon'])
+    # else:
+    #     lat = float(request.get_json()['lat'])
+    #     lon = float(request.get_json()['lon'])
+    try:
+        latlon = get_location()
+        lat = float(latlon['lat'])
+        lon = float(latlon['lon'])
+    except Exception as e:
+        notification.send_push_notification(f'Issue getting location: {e}')
+        raise KeyError('Issue with getting Car location')
     radius = 6371
     d_lat = math.radians(lat - LAT_HOME)
     d_lon = math.radians(lon - LON_HOME)
@@ -96,11 +112,9 @@ def get_proximity():
         data['is_close'] = False
         data['is_on_arcuri'] = False
         return data
-        # json_data = json.dumps(data)
-        # return json_data
 
 
-@app.route('/is_home_street', methods=['GET'])
+@app.get('/is_home_street')
 def is_on_home_street():
     try:
         car_gps = get_location()
@@ -114,12 +128,11 @@ def is_on_home_street():
     else:
         try:
             gps_only = dict(list(car_gps.items())[:2])
-            street = requests.get(f'{GEOAPIFY_URL}?apiKey={GEOAPIFY_KEY}', params=gps_only).json()['features'][0]['properties']['street']
+            street = \
+                requests.get(f'{GEOAPIFY_URL}?apiKey={GEOAPIFY_KEY}', params=gps_only).json()['features'][0][
+                    'properties'][
+                    'street']
             return json.dumps(True) if street == HOME_STREET else json.dumps(False)
         except KeyError as e:
             notification.send_push_notification(f"Issue with API: {e}")
             raise KeyError(f"Error with Geccoding API: {e}")
-
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
