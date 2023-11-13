@@ -1,14 +1,11 @@
 import math
 import teslapy
-from flask import Flask, request
 import os
 import notification
 import requests
 import json
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-# TODO: Convert to Fast API
 
 """
    wrapper around the TeslaPy Python module that returns car's location in lat,lon format
@@ -36,9 +33,10 @@ app.add_middleware(
 
 
 @app.get('/')
-def default():
-    if 'method' in request.get_json():
-        match request.get_json()['method']:
+async def default(request: Request):
+    if 'method' in await request.json():
+        request_json = await request.json()
+        match request_json['method']:
             case 'get_location':
                 return get_location()
             case 'get_proximity':
