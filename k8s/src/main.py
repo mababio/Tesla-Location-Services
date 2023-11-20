@@ -4,8 +4,10 @@ import os
 import notification
 import requests
 import json
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from logs import logger
+from pydantic import BaseModel
 
 """
    wrapper around the TeslaPy Python module that returns car's location in lat,lon format
@@ -22,6 +24,7 @@ TESLA_USERNAME = os.environ.get("TESLA_USERNAME")
 HOME_STREET = os.environ.get("HOME_STREET")
 GEOAPIFY_KEY = os.environ.get("GEOAPIFY_KEY")
 GEOAPIFY_URL = os.environ.get("GEOAPIFY_URL")
+TESLA_DATA_SERVICES_BASE_URL = os.environ.get('TESLA_DATA_SERVICES_BASE_URL')
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +33,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class Gps(BaseModel):
+    lat: float
+    lon: float
+
+
+def save_gps(gps):
+    try:
+        requests.put(f"{TESLA_DATA_SERVICES_BASE_URL}/api/car/update/gps", json=gps)
+        logger.info("hello_pubsub::::: Attempting to save lat lon to mongodb ")
+    except Exception as e:
+        logger.error('ERROR ------> ' + str(e))
+
+
+@app.post('/save_location')
+async def save_location(gps: Gps, background_tasks: BackgroundTasks):
+    background_tasks.add_task(save_gps, gps)
+    return {"message": "GPS coordinate sent in the background"}
 
 
 @app.get('/')
