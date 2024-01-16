@@ -77,30 +77,25 @@ def get_location():
         timeout = 10
         try:
             vehicles[0].sync_wake_up(timeout)
-            tesla_data = vehicles[0].api('VEHICLE_DATA')
+            tesla_data = vehicles[0].api('VEHICLE_DATA', endpoints='location_data;')
         except teslapy.VehicleError as e:
             notification.send_push_notification(f"Timeout of {timeout} second for car to wake was reached:{e}")
             raise teslapy.VehicleError
 
-        if type(tesla_data) is not teslapy.JsonDict or wanted_key not in tesla_data['response']:
-            return None
-        else:
-            drive_state = tesla_data['response'][wanted_key]
-            return {'lat': drive_state['latitude'], 'lon': drive_state['longitude'], 'speed': drive_state['speed']}
+        try:
+            lat = tesla_data['response'][wanted_key]['latitude']
+            lon = tesla_data['response'][wanted_key]['longitude']
+            speed = tesla_data['response'][wanted_key]['speed']
+            return {'lat': lat, 'lon': lon, 'speed': speed}
+        except KeyError as e:
+            notification.send_push_notification(
+                f"Keep in mind that we are using an external python Module to get tesla data. Their API may have changed.")
+            notification.send_push_notification(f"KeyError: {e}")
+            raise KeyError(f"KeyError: {e}")
 
 
 @app.get('/get_proximity')
 def get_proximity():
-
-    #TODO: Not sure if someother resouce depends on providing gps so come back and fix this
-
-    # if 'lat' not in request.get_json() or 'lon' not in request.get_json():
-    #     latlon = get_location()
-    #     lat = float(latlon['lat'])
-    #     lon = float(latlon['lon'])
-    # else:
-    #     lat = float(request.get_json()['lat'])
-    #     lon = float(request.get_json()['lon'])
     try:
         latlon = get_location()
         lat = float(latlon['lat'])
@@ -122,7 +117,8 @@ def get_proximity():
     if difference < HOME_RADIUS \
             or math.isclose(difference, HOME_RADIUS):
         data['is_close'] = True
-        if is_on_home_street(lat, lon):
+        if is_on_home_street():
+            # if is_on_home_street(lat, lon):
             data['is_on_arcuri'] = True
         else:
             data['is_on_arcuri'] = False
@@ -156,3 +152,9 @@ def is_on_home_street():
         except KeyError as e:
             notification.send_push_notification(f"Issue with API: {e}")
             raise KeyError(f"Error with Geccoding API: {e}")
+
+
+if __name__ == '__main__':
+    print(get_location())
+    print(get_proximity())
+    print(is_on_home_street())
