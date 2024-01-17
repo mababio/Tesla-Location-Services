@@ -17,14 +17,18 @@ from pydantic import BaseModel
 app = FastAPI()
 logger = Logger(__name__)
 
-LAT_HOME = float(os.environ.get("LAT_HOME"))
-LON_HOME = float(os.environ.get("LON_HOME"))
-HOME_RADIUS = float(os.environ.get("HOME_RADIUS"))
-TESLA_USERNAME = os.environ.get("TESLA_USERNAME")
-HOME_STREET = os.environ.get("HOME_STREET")
-GEOAPIFY_KEY = os.environ.get("GEOAPIFY_KEY")
-GEOAPIFY_URL = os.environ.get("GEOAPIFY_URL")
-TESLA_DATA_SERVICES_BASE_URL = os.environ.get('TESLA_DATA_SERVICES_BASE_URL')
+try:
+    LAT_HOME = float(os.environ["LAT_HOME"])
+    LON_HOME = float(os.environ["LON_HOME"])
+    HOME_RADIUS = float(os.environ["HOME_RADIUS"])
+    TESLA_USERNAME = os.environ["TESLA_USERNAME"]
+    HOME_STREET = os.environ["HOME_STREET"]
+    GEOAPIFY_KEY = os.environ["GEOAPIFY_KEY"]
+    GEOAPIFY_URL = os.environ["GEOAPIFY_URL"]
+    TESLA_DATA_SERVICES_BASE_URL = os.environ['TESLA_DATA_SERVICES_BASE_URL']
+except KeyError as e:
+    logger.error(str(e))
+    raise
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,8 +48,8 @@ def save_gps(gps):
     try:
         requests.put(f"{TESLA_DATA_SERVICES_BASE_URL}/api/car/update/gps", json=gps)
         logger.info("Attempting to save lat lon to mongodb ")
-    except Exception as e:
-        logger.error(str(e))
+    except Exception as ef:
+        logger.error(str(ef))
 
 
 @app.post('/save_location')
@@ -78,8 +82,8 @@ def get_location():
         try:
             vehicles[0].sync_wake_up(timeout)
             tesla_data = vehicles[0].api('VEHICLE_DATA', endpoints='location_data;')
-        except teslapy.VehicleError as e:
-            logger.error(f"Timeout of {timeout} second for car to wake was reached:{e}")
+        except teslapy.VehicleError as f:
+            logger.error(f"Timeout of {timeout} second for car to wake was reached:{f}")
             raise teslapy.VehicleError
 
         try:
@@ -87,11 +91,11 @@ def get_location():
             lon = tesla_data['response'][wanted_key]['longitude']
             speed = tesla_data['response'][wanted_key]['speed']
             return {'lat': lat, 'lon': lon, 'speed': speed}
-        except KeyError as e:
+        except KeyError as ee:
             logger.error(
                 f"Keep in mind that we are using an external python Module to get tesla data. Their API may have "
-                f"changed. {e}")
-            raise KeyError(f"KeyError: {e}")
+                f"changed. {ee}")
+            raise KeyError(f"KeyError: {ee}")
 
 
 @app.get('/get_proximity')
@@ -100,8 +104,8 @@ def get_proximity():
         latlon = get_location()
         lat = float(latlon['lat'])
         lon = float(latlon['lon'])
-    except Exception as e:
-        logger.error(f'Issue getting location: {e}')
+    except Exception as eee:
+        logger.error(f'Issue getting location: {eee}')
         raise KeyError('Issue with getting Car location')
     radius = 6371
     d_lat = math.radians(lat - LAT_HOME)
@@ -134,8 +138,8 @@ def get_proximity():
 def is_on_home_street():
     try:
         car_gps = get_location()
-    except Exception as e:
-        logger.error(f'Issue getting Car location {e}')
+    except Exception as ex:
+        logger.error(f'Issue getting Car location {ex}')
         raise Exception
 
     if not isinstance(car_gps, dict) or 'lat' not in car_gps or 'lon' not in car_gps:
@@ -149,9 +153,9 @@ def is_on_home_street():
                     'properties'][
                     'street']
             return json.dumps(True) if street == HOME_STREET else json.dumps(False)
-        except KeyError as e:
-            logger.error(f"Issue with API: {e}")
-            raise KeyError(f"Error with Geccoding API: {e}")
+        except KeyError as exc:
+            logger.error(f"Issue with API: {exc}")
+            raise KeyError(f"Error with Geccoding API: {exc}")
 
 
 if __name__ == '__main__':
