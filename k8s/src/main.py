@@ -1,12 +1,11 @@
 import math
 import teslapy
 import os
-import notification
 import requests
 import json
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from logs import logger
+from logs import Logger
 from pydantic import BaseModel
 
 """
@@ -16,6 +15,7 @@ from pydantic import BaseModel
 """
 
 app = FastAPI()
+logger = Logger(__name__)
 
 LAT_HOME = float(os.environ.get("LAT_HOME"))
 LON_HOME = float(os.environ.get("LON_HOME"))
@@ -43,9 +43,9 @@ class Gps(BaseModel):
 def save_gps(gps):
     try:
         requests.put(f"{TESLA_DATA_SERVICES_BASE_URL}/api/car/update/gps", json=gps)
-        logger.info("hello_pubsub::::: Attempting to save lat lon to mongodb ")
+        logger.info("Attempting to save lat lon to mongodb ")
     except Exception as e:
-        logger.error('ERROR ------> ' + str(e))
+        logger.error(str(e))
 
 
 @app.post('/save_location')
@@ -79,7 +79,7 @@ def get_location():
             vehicles[0].sync_wake_up(timeout)
             tesla_data = vehicles[0].api('VEHICLE_DATA', endpoints='location_data;')
         except teslapy.VehicleError as e:
-            notification.send_push_notification(f"Timeout of {timeout} second for car to wake was reached:{e}")
+            logger.error(f"Timeout of {timeout} second for car to wake was reached:{e}")
             raise teslapy.VehicleError
 
         try:
@@ -88,9 +88,9 @@ def get_location():
             speed = tesla_data['response'][wanted_key]['speed']
             return {'lat': lat, 'lon': lon, 'speed': speed}
         except KeyError as e:
-            notification.send_push_notification(
-                f"Keep in mind that we are using an external python Module to get tesla data. Their API may have changed.")
-            notification.send_push_notification(f"KeyError: {e}")
+            logger.error(
+                f"Keep in mind that we are using an external python Module to get tesla data. Their API may have "
+                f"changed. {e}")
             raise KeyError(f"KeyError: {e}")
 
 
@@ -101,7 +101,7 @@ def get_proximity():
         lat = float(latlon['lat'])
         lon = float(latlon['lon'])
     except Exception as e:
-        notification.send_push_notification(f'Issue getting location: {e}')
+        logger.error(f'Issue getting location: {e}')
         raise KeyError('Issue with getting Car location')
     radius = 6371
     d_lat = math.radians(lat - LAT_HOME)
@@ -135,11 +135,11 @@ def is_on_home_street():
     try:
         car_gps = get_location()
     except Exception as e:
-        notification.send_push_notification('Issue getting Car location')
+        logger.error(f'Issue getting Car location {e}')
         raise Exception
 
     if not isinstance(car_gps, dict) or 'lat' not in car_gps or 'lon' not in car_gps:
-        notification.send_push_notification("Expected location data not actual data")
+        logger.error("Expected location data not actual data")
         raise Exception
     else:
         try:
@@ -150,7 +150,7 @@ def is_on_home_street():
                     'street']
             return json.dumps(True) if street == HOME_STREET else json.dumps(False)
         except KeyError as e:
-            notification.send_push_notification(f"Issue with API: {e}")
+            logger.error(f"Issue with API: {e}")
             raise KeyError(f"Error with Geccoding API: {e}")
 
 
