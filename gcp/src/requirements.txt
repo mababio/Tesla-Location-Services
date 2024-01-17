@@ -1,6 +1,0 @@
-teslapy==2.8.0
-google-cloud-logging==3.2.2
-dynaconf==3.1.11
-googlemaps==4.6.0
-google-cloud-logging==3.2.2
-
