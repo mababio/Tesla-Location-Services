@@ -38,22 +38,22 @@ class Logger:
             self.r = None
 
     def info(self, message):
-        self.logger.info(message)
+        self.logger.info(message, stacklevel=2)
         if self.r and self.logger.level == logging.DEBUG:
             self.r.publish(self.redis_channel, self.log_stream.getvalue())
 
     def error(self, message):
-        self.logger.error(message)
+        self.logger.error(message, stacklevel=2)
         if self.r:
             self.r.publish(self.redis_channel, self.log_stream.getvalue())
 
     def debug(self, message):
-        self.logger.debug(message)
+        self.logger.debug(message, stacklevel=2)
         if self.r:
             self.r.publish(self.redis_channel, self.log_stream.getvalue())
 
     def warning(self, message):
-        self.logger.warning(message)
+        self.logger.warning(message, stacklevel=2)
         if self.r and self.logger.level == logging.DEBUG:
             self.r.publish(self.redis_channel, self.log_stream.getvalue())
 
